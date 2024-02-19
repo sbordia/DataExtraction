@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Files</title>
+</head>
+<!-- Add a loading spinner element -->
+<div id="loading-spinner" style="display: none;">
+    <img src="loading.gif" alt="Loading..." width="50" height="50">
+    <p>Loading...</p>
+</div>
+<body>
+    <h1>Process Files</h1>
+    <form id="file-form">
+        <label for="prompt">Prompt:</label>
+        <input type="text" id="prompt" name="prompt" required>
+        <br>
+        <label for="files">Files:</label>
+        <input type="file" id="files" name="files" multiple required>
+        <br>
+        <button type="submit">Process</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+        const form = document.getElementById('file-form');
+        const promptInput = document.getElementById('prompt');
+        const filesInput = document.getElementById('files');
+        const resultsDiv = document.getElementById('results');
+
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+
+			const prompt = promptInput.value;
+			const files = filesInput.files;
+
+			// Create form data object
+			const formData = new FormData();
+			formData.append('prompt', prompt);
+			for (const file of files) {
+				formData.append('files', file);
+			}
+
+			// Show loading spinner
+			const loadingSpinner = document.getElementById('loading-spinner');
+			loadingSpinner.style.display = 'block';
+
+			try {
+				const response = await fetch('http://localhost:8000/process', {
+					method: 'POST',
+					body: formData
+				});
+
+				if (!response.ok) {
+					resultsDiv.textContent = 'Error processing files.';
+					return;
+				}
+
+				const data = await response.json();
+				resultsDiv.textContent = JSON.stringify(data, null, 2);
+			} catch (error) {
+				console.error('Error:', error);
+				resultsDiv.textContent = 'Error processing files, exception - ' + error;
+			} finally {
+				// Hide loading spinner after fetch request completes
+				loadingSpinner.style.display = 'none';
+			}
+		});
+    </script>
+</body>
+</html>

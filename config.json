@@ -1,0 +1,12 @@
+{
+    "ask_1": "Please extract the interns names with their status indicating whether they passed or not",
+    "file_1_1": ["interns.csv", "interns2.csv"],
+    "file_1_2": ["interns.xlsx", "interns2.xlsx"],
+    "output_file_1": ["accepted_interns.csv"],
+    "ask": "Please extract the name, invoice date and amount due from the invoice for each employee",
+    "file": ["invoice1.jpg"],
+    "file_2_3": ["invoice1.pdf"],
+    "output_file": ["invoice.csv"],
+    "ask_3": "Please extract the maximum weekly hours for an employee from the compliance document",
+    "file_3": ["compliance.pdf"]
+}
