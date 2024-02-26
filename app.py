@@ -229,7 +229,10 @@ def ProcessPrompt(ask, files):
                 print(f"Error processing {file}: {e}")
         else:
             print(f"Unsupported file type: {file}")
-            sys.exit(1)
+            if not useFASTAPI:
+                sys.exit(1)
+            else:
+                return {"error": f"Unsupported file type: {file}"}
 
     combined_data = "\n".join(data_list)
     #print(combined_data)
