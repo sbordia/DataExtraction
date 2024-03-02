@@ -22,6 +22,8 @@ from fastapi import FastAPI, Body, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # Set the OpenAI API key
 load_dotenv()
@@ -280,8 +282,20 @@ if not useFASTAPI:
 ########################################################################################################
 ### Routes Invocation ###
 ########################################################################################################
-
 if useFASTAPI:
+    ### Setup CORS ###
+    origins = ["*"]  # Replace with specific origins if necessary
+
+    app.add_middleware(
+        CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"]
+    )
+
+    ### Static Files ###
+    @app.get("/")
+    async def return_index():
+        return FileResponse("index.html")    
+
+    ### Process Data ###
     @app.post("/process")
     async def process_data(prompt: str = Body(...), files: List[UploadFile] = File(...)):
         file_names = []
@@ -313,16 +327,12 @@ if useFASTAPI:
 
         return {"results": results}
 
+    ### Test endpoint ###
     @app.get("/hello")
     async def hello_world():
         return {"message": "Hello from Extraction FAST API!"}
 
-    origins = ["*"]  # Replace with specific origins if necessary
-
-    app.add_middleware(
-        CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"]
-    )
-
+    ### Run the server ###
     if __name__ == "__main__":
         uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
 
