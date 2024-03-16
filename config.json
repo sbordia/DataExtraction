@@ -7,6 +7,6 @@
     "file": ["invoice1.jpg"],
     "file_2_3": ["invoice1.pdf"],
     "output_file": ["invoice.csv"],
-    "ask_3": "Please extract the maximum weekly hours for an employee from the compliance document",
+    "ask_3": "Please extract the maximum weekly hours for an employee from the compliance document. Pick the first value once found and do not return more than one",
     "file_3": ["compliance.pdf"]
 }

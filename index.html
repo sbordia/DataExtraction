@@ -4,12 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Process Files</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        #results {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        #results th, #results td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        #results th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
-<!-- Add a loading spinner element -->
-<div id="loading-spinner" style="display: none;">
-    <img src="loading.gif" alt="Loading..." width="50" height="50">
-    <p>Loading...</p>
-</div>
 <body>
     <h1>Process Files</h1>
     <form id="file-form">
@@ -21,52 +38,102 @@
         <br>
         <button type="submit">Process</button>
     </form>
-    <div id="results"></div>
+    <div id="loading-spinner" style="display: none;">
+        <img src="static/loading.gif" alt="Loading..." width="50" height="50">
+        <p>Loading...</p>
+    </div>
+    <h2 id="table-title" style="display: none;">Extraction Data</h2>
+    <table id="results" style="display: none;">
+        <thead>
+            <tr id="header-row"></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 
     <script>
         const form = document.getElementById('file-form');
         const promptInput = document.getElementById('prompt');
         const filesInput = document.getElementById('files');
-        const resultsDiv = document.getElementById('results');
+        const resultsTable = document.getElementById('results');
+        const resultsBody = resultsTable.querySelector('tbody');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const tableTitle = document.getElementById('table-title');
 
-		form.addEventListener('submit', async (event) => {
-			event.preventDefault();
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
 
-			const prompt = promptInput.value;
-			const files = filesInput.files;
+            const prompt = promptInput.value;
+            const files = filesInput.files;
 
-			// Create form data object
-			const formData = new FormData();
-			formData.append('prompt', prompt);
-			for (const file of files) {
-				formData.append('files', file);
-			}
+            // Create form data object
+            const formData = new FormData();
+            formData.append('prompt', prompt);
+            for (const file of files) {
+                formData.append('files', file);
+            }
 
-			// Show loading spinner
-			const loadingSpinner = document.getElementById('loading-spinner');
-			loadingSpinner.style.display = 'block';
+            // Show loading spinner
+            loadingSpinner.style.display = 'block';
 
-			try {
-				const response = await fetch('http://localhost:8000/process', {
-					method: 'POST',
-					body: formData
-				});
+            try {
+                const response = await fetch('http://localhost:8000/process', {
+                    method: 'POST',
+                    body: formData
+                });
 
-				if (!response.ok) {
-					resultsDiv.textContent = 'Error processing files.';
-					return;
-				}
+                if (!response.ok) {
+                    resultsTable.style.display = 'none';
+                    tableTitle.style.display = 'none';
+                    loadingSpinner.style.display = 'none';
+                    alert('Error processing files.');
+                    return;
+                }
 
-				const data = await response.json();
-				resultsDiv.textContent = JSON.stringify(data, null, 2);
-			} catch (error) {
-				console.error('Error:', error);
-				resultsDiv.textContent = 'Error processing files, exception - ' + error;
-			} finally {
-				// Hide loading spinner after fetch request completes
-				loadingSpinner.style.display = 'none';
-			}
-		});
+                const data = await response.json();
+
+                // Clear existing rows and headers
+                resultsBody.innerHTML = '';
+                const headerRow = document.getElementById('header-row');
+                headerRow.innerHTML = '';
+
+                // Populate table with data
+                const attributes = data.results[0].attributes;
+                const keys = Object.keys(attributes[0]); // Get the keys from the first row
+
+                keys.forEach(key => {
+                    if (attributes.some(obj => obj[key] !== undefined && obj[key] !== null && obj[key] !== '')) {
+                        const th = document.createElement('th');
+                        th.textContent = key;
+                        headerRow.appendChild(th);
+                    }
+                });
+
+                attributes.forEach(rowData => {
+                    const row = document.createElement('tr');
+                    keys.forEach(key => {
+                        if (rowData[key] !== undefined && rowData[key] !== null && rowData[key] !== '') {
+                            const cell = document.createElement('td');
+                            cell.textContent = rowData[key];
+                            row.appendChild(cell);
+                        }
+                    });
+                    resultsBody.appendChild(row);
+                });
+
+                // Show table and title
+                tableTitle.style.display = 'block';
+                resultsTable.style.display = 'table';
+            } catch (error) {
+                console.error('Error:', error);
+                resultsTable.style.display = 'none';
+                tableTitle.style.display = 'none';
+                loadingSpinner.style.display = 'none';
+                alert('Error processing files, exception - ' + error);
+            } finally {
+                // Hide loading spinner after fetch request completes
+                loadingSpinner.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>

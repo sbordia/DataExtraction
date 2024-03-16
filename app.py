@@ -290,6 +290,9 @@ if useFASTAPI:
         CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"]
     )
 
+    # Mount the static directory to serve static files
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
     ### Static Files ###
     @app.get("/")
     async def return_index():
