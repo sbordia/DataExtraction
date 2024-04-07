@@ -8,14 +8,21 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            text-align: center;
         }
         h1 {
             margin-bottom: 20px;
+            text-align: center;
+        }
+        form {
+            margin-bottom: 20px;
+            text-align: center;
         }
         #results {
             margin-top: 20px;
             border-collapse: collapse;
             width: 100%;
+            display: none;
         }
         #results th, #results td {
             border: 1px solid #ddd;
@@ -24,6 +31,11 @@
         }
         #results th {
             background-color: #f2f2f2;
+        }
+        #save-button {
+            margin-top: 20px;
+            text-align: center;
+            display: none;
         }
     </style>
 </head>
@@ -43,21 +55,27 @@
         <p>Loading...</p>
     </div>
     <h2 id="table-title" style="display: none;">Extraction Data</h2>
-    <table id="results" style="display: none;">
+    <table id="results">
         <thead>
             <tr id="header-row"></tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="table-body"></tbody>
     </table>
+    <div id="save-button">
+        <button id="download-button">Save Data</button>
+    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script>
         const form = document.getElementById('file-form');
         const promptInput = document.getElementById('prompt');
         const filesInput = document.getElementById('files');
         const resultsTable = document.getElementById('results');
-        const resultsBody = resultsTable.querySelector('tbody');
+        const tableBody = document.getElementById('table-body');
         const loadingSpinner = document.getElementById('loading-spinner');
         const tableTitle = document.getElementById('table-title');
+        const saveButton = document.getElementById('save-button');
+        const downloadButton = document.getElementById('download-button');
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -85,20 +103,21 @@
                     resultsTable.style.display = 'none';
                     tableTitle.style.display = 'none';
                     loadingSpinner.style.display = 'none';
+                    saveButton.style.display = 'none';
                     alert('Error processing files.');
                     return;
                 }
 
                 const data = await response.json();
 
-                // Clear existing rows and headers
-                resultsBody.innerHTML = '';
+                // Clear existing table data
+                tableBody.innerHTML = '';
                 const headerRow = document.getElementById('header-row');
                 headerRow.innerHTML = '';
 
                 // Populate table with data
                 const attributes = data.results[0].attributes;
-                const keys = Object.keys(attributes[0]); // Get the keys from the first row
+                const keys = Object.keys(attributes[0]);
 
                 keys.forEach(key => {
                     if (attributes.some(obj => obj[key] !== undefined && obj[key] !== null && obj[key] !== '')) {
@@ -117,23 +136,41 @@
                             row.appendChild(cell);
                         }
                     });
-                    resultsBody.appendChild(row);
+                    tableBody.appendChild(row);
                 });
 
-                // Show table and title
+                // Show table, title, and save button
                 tableTitle.style.display = 'block';
                 resultsTable.style.display = 'table';
+                saveButton.style.display = 'block';
+
+                // Save data on button click
+                downloadButton.onclick = function () {
+                    const csvData = prepareCsvData(attributes, keys);
+                    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
+                    saveAs(blob, 'extraction_data.csv');
+                };
             } catch (error) {
                 console.error('Error:', error);
                 resultsTable.style.display = 'none';
                 tableTitle.style.display = 'none';
                 loadingSpinner.style.display = 'none';
+                saveButton.style.display = 'none';
                 alert('Error processing files, exception - ' + error);
             } finally {
                 // Hide loading spinner after fetch request completes
                 loadingSpinner.style.display = 'none';
             }
         });
+
+        // Function to prepare CSV data
+        function prepareCsvData(data, keys) {
+            let csv = keys.join(',') + '\n';
+            data.forEach(row => {
+                csv += keys.map(key => row[key] || '').join(',') + '\n';
+            });
+            return csv;
+        }
     </script>
 </body>
 </html>
