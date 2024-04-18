@@ -77,6 +77,7 @@ class DynamicData(BaseModel):
     attrib3: str = Field(description="attribute 3")
     attrib4: str = Field(description="attribute 4")
     attrib5: str = Field(description="attribute 5")
+    attrib6: str = Field(description="attribute 6")
 
 class DynamicClass(BaseModel):
     """Information to extract."""
@@ -264,6 +265,25 @@ def ProcessPrompt(ask, files):
     else:
         return output
 
+def modify_array(data):
+    modified_data = []
+    for item in data:
+        attributes = item.get('attributes', [])
+        modified_attributes = []
+        for attr in attributes:
+            modified_attr = {
+                'key': attr.get('attrib1', ''),
+                'value': attr.get('attrib2', ''),
+                'value2': attr.get('attrib3', ''),
+                'value3': attr.get('attrib4', ''),
+                'value4': attr.get('attrib5', ''),
+                'value5': attr.get('attrib6', '')
+            }
+            modified_attributes.append(modified_attr)
+        modified_item = {'attributes': modified_attributes}
+        modified_data.append(modified_item)
+    return modified_data
+
 ########################################################################################################
 ### Config Invocation when useFASTAPI is not enabled ###
 ########################################################################################################
@@ -319,7 +339,10 @@ if useFASTAPI:
             result = ProcessPrompt(prompt, [local_file])
             results.append(result)
         
-        print("Output:", results)
+        print("Original output:", results)
+
+        modified_results = modify_array(results)
+        print("Modified output:", modified_results)
 
         # Delete uploaded files after processing
         for file_name in file_names:
@@ -328,7 +351,7 @@ if useFASTAPI:
             except Exception as e:
                 print(f"Error deleting {file_name}: {e}")
 
-        return {"results": results}
+        return {"results": modified_results}
 
     ### Test endpoint ###
     @app.get("/hello")

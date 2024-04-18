@@ -8,15 +8,47 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         h1 {
             margin-bottom: 20px;
             text-align: center;
+            color: #333;
         }
         form {
             margin-bottom: 20px;
             text-align: center;
+        }
+        input[type="text"], input[type="file"], button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #loading-spinner {
+            text-align: center;
+            display: none;
         }
         #results {
             margin-top: 20px;
@@ -37,32 +69,44 @@
             text-align: center;
             display: none;
         }
+        #download-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #download-button:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
-    <h1>Process Files</h1>
-    <form id="file-form">
-        <label for="prompt">Prompt:</label>
-        <input type="text" id="prompt" name="prompt" required>
-        <br>
-        <label for="files">Files:</label>
-        <input type="file" id="files" name="files" multiple required>
-        <br>
-        <button type="submit">Process</button>
-    </form>
-    <div id="loading-spinner" style="display: none;">
-        <img src="static/loading.gif" alt="Loading..." width="50" height="50">
-        <p>Loading...</p>
-    </div>
-    <h2 id="table-title" style="display: none;">Extraction Data</h2>
-    <table id="results">
-        <thead>
-            <tr id="header-row"></tr>
-        </thead>
-        <tbody id="table-body"></tbody>
-    </table>
-    <div id="save-button">
-        <button id="download-button">Save Data</button>
+    <div class="container">
+        <h1>Process Files</h1>
+        <form id="file-form">
+            <label for="prompt">Prompt:</label>
+            <input type="text" id="prompt" name="prompt" required>
+            <label for="files">Files:</label>
+            <input type="file" id="files" name="files" multiple required>
+            <button type="submit">Process</button>
+        </form>
+        <div id="loading-spinner">
+            <img src="static/loading.gif" alt="Loading..." width="50" height="50">
+            <p>Loading...</p>
+        </div>
+        <h2 id="table-title" style="display: none;">Extraction Data</h2>
+        <table id="results">
+            <thead>
+                <tr id="header-row"></tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+        <div id="save-button">
+            <button id="download-button">Save Data</button>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
@@ -116,27 +160,28 @@
                 headerRow.innerHTML = '';
 
                 // Populate table with data
-                const attributes = data.results[0].attributes;
-                const keys = Object.keys(attributes[0]);
+                const keys = Object.keys(data.results[0].attributes[0]);
 
                 keys.forEach(key => {
-                    if (attributes.some(obj => obj[key] !== undefined && obj[key] !== null && obj[key] !== '')) {
+                    if (data.results[0].attributes[0][key] !== undefined && data.results[0].attributes[0][key] !== null && data.results[0].attributes[0][key] !== '') {
                         const th = document.createElement('th');
                         th.textContent = key;
                         headerRow.appendChild(th);
                     }
                 });
 
-                attributes.forEach(rowData => {
-                    const row = document.createElement('tr');
-                    keys.forEach(key => {
-                        if (rowData[key] !== undefined && rowData[key] !== null && rowData[key] !== '') {
-                            const cell = document.createElement('td');
-                            cell.textContent = rowData[key];
-                            row.appendChild(cell);
-                        }
+                data.results.forEach(result => {
+                    result.attributes.forEach(rowData => {
+                        const row = document.createElement('tr');
+                        keys.forEach(key => {
+                            if (rowData[key] !== undefined && rowData[key] !== null && rowData[key] !== '') {
+                                const cell = document.createElement('td');
+                                cell.textContent = rowData[key];
+                                row.appendChild(cell);
+                            }
+                        });
+                        tableBody.appendChild(row);
                     });
-                    tableBody.appendChild(row);
                 });
 
                 // Show table, title, and save button
@@ -146,7 +191,7 @@
 
                 // Save data on button click
                 downloadButton.onclick = function () {
-                    const csvData = prepareCsvData(attributes, keys);
+                    const csvData = prepareCsvData(data.results, keys);
                     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
                     saveAs(blob, 'extraction_data.csv');
                 };
@@ -164,10 +209,12 @@
         });
 
         // Function to prepare CSV data
-        function prepareCsvData(data, keys) {
+        function prepareCsvData(results, keys) {
             let csv = keys.join(',') + '\n';
-            data.forEach(row => {
-                csv += keys.map(key => row[key] || '').join(',') + '\n';
+            results.forEach(result => {
+                result.attributes.forEach(row => {
+                    csv += keys.map(key => row[key] || '').join(',') + '\n';
+                });
             });
             return csv;
         }
