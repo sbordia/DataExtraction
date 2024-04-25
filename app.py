@@ -35,6 +35,8 @@ model = ChatOpenAI(temperature=0)
 app = FastAPI()
 useFASTAPI = True
 
+max_items = 5
+
 ########################################################################################################
 ### Static Classes (Not used currently) ###
 ########################################################################################################
@@ -80,7 +82,7 @@ class DynamicData(BaseModel):
     attrib6: str = Field(description="attribute 6")
 
 class DynamicClass(BaseModel):
-    """Information to extract."""
+    """Information to extract. If the return list is longer than 5 DynamicData objects, restrict the number of objects to 5."""
     attributes: List[DynamicData] = Field(description="List of attributes")
 
 ########################################################################################################
@@ -201,6 +203,15 @@ def ProcessDynamicOutput(output):
 ### Main processing function using OpenAI operations using Langchain ###
 ########################################################################################################
 
+def remove_special_characters(text):
+    # Define a regular expression pattern to match special characters
+    pattern = r'[^a-zA-Z0-9\s]'  # Keep alphanumeric characters and whitespace
+    
+    # Remove special characters using regex
+    cleaned_text = re.sub(pattern, '', text)
+    
+    return cleaned_text
+
 def ProcessPrompt(ask, files):
     # Read the contents of the files
     data_list = []
@@ -209,11 +220,19 @@ def ProcessPrompt(ask, files):
         extension = file.split(".")[-1]
         if extension in ["csv", "xlsx"]:
             # Structured Excel or CSV data
-            if extension == "xlsx":
-                data = pd.read_excel(file)
-            else:
-                data = pd.read_csv(file)
-            data_list.append(data.to_string())
+            try:
+                if extension == "xlsx":
+                    data = pd.read_excel(file)
+                else:
+                    data = pd.read_csv(file, skiprows=1)
+                data = remove_special_characters(data.to_string())
+                data_list.append(data)
+            except Exception as e:
+                print(f"Error processing {file}: {e}")
+                if not useFASTAPI:
+                    sys.exit(1)
+                else:
+                    return {"error": f"Error in processing file: {e}"}
         elif extension in ["jpg", "jpeg", "png"]:
             # Unstructured data (images)
             try:
@@ -221,6 +240,10 @@ def ProcessPrompt(ask, files):
                 data_list.append(text)
             except Exception as e:
                 print(f"Error processing {file}: {e}")
+                if not useFASTAPI:
+                    sys.exit(1)
+                else:
+                    return {"error": f"Error in processing file: {e}"}
         elif extension == "pdf":
             # Unstructured data (PDF)
             try:
@@ -230,6 +253,10 @@ def ProcessPrompt(ask, files):
                 data_list.append(text)
             except Exception as e:
                 print(f"Error processing {file}: {e}")
+                if not useFASTAPI:
+                    sys.exit(1)
+                else:
+                    return {"error": f"Error in processing file: {e}"}
         else:
             print(f"Unsupported file type: {file}")
             if not useFASTAPI:
@@ -238,7 +265,7 @@ def ProcessPrompt(ask, files):
                 return {"error": f"Unsupported file type: {file}"}
 
     combined_data = "\n".join(data_list)
-    #print(combined_data)
+#    print(combined_data)
 
     # Use generic function for dynamic class
     functions = [
@@ -258,7 +285,16 @@ def ProcessPrompt(ask, files):
     extraction_chain = prompt | extraction_model | JsonOutputFunctionsParser()
 
     # Now we are ready to process the data and get the output
-    output = extraction_chain.invoke({"input": combined_data})
+    try:
+        output = extraction_chain.invoke({"input": combined_data})
+    except Exception as e:
+        print(f"Error processing the prompt: {e}")
+        if not useFASTAPI:
+            sys.exit(1)
+        else:
+            details = str(e)
+            data = [{'attributes': [{'attrib1': 'Exception', 'attrib2': {details}}]}]
+            return data[0]
 
     if not useFASTAPI:
         ProcessDynamicOutput(output)
